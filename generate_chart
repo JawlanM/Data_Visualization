@@ -1,0 +1,178 @@
+from fpdf import FPDF
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+
+# Data
+order_times = 634
+total_customers = 578
+returning_customers = 50
+repurchase_rate = 0.087
+valuable_customer_id = "TMP446695460300652544"
+first_time_customers = total_customers - returning_customers
+
+hour_data = {
+    11: 15,
+    12: 59,
+    13: 50,
+    14: 34,
+    15: 29,
+    16: 45,
+    17: 53,
+    18: 118,
+    19: 127,
+    20: 75,
+    21: 28,
+}
+
+day_name_data = {
+    "Mon": 71,
+    "Tues": 90,
+    "Wed": 73,
+    "Thur": 85,
+    "Fri": 99,
+    "Sat": 109,
+    "Su": 106,
+}
+
+month_data = {
+    "September": 231,
+    "October": 277,
+    "November": 125,
+}
+
+# Initialize PDF
+class ReportPDF(FPDF):
+      
+    def footer(self):
+        # Page footer
+        self.set_y(-15)
+        self.set_font('Arial', 'I', 8)
+        self.set_text_color(128, 128, 128)  # Gray color for footer
+        self.cell(0, 10, f'Page {self.page_no()}', align='C')
+
+    def chapter_title(self, title):
+        self.set_font('Arial', 'B', 14)
+        self.set_text_color(0, 102, 204)  # Blue color for chapter title
+        self.cell(0, 10, title, ln=True)
+        self.ln(5)
+
+    def chapter_body(self, body):
+        self.set_font('Arial', '', 12)
+        self.set_text_color(0, 0, 0)  # Black color for body text
+        self.multi_cell(0, 10, body)
+        self.ln(10)  # Added spacing
+
+pdf = ReportPDF()
+
+# Add Title Page
+pdf.add_page()
+pdf.set_font('Arial', 'B', 24)
+pdf.set_text_color(0, 0, 128)  # Navy Blue color
+pdf.cell(0, 100, 'Customer Data Insights Report', align='C', ln=True)
+pdf.set_font('Arial', '', 14)
+pdf.set_text_color(0, 0, 0)  # Black color
+pdf.cell(0, 10, 'Generated with Python and Matplotlib', align='C')
+pdf.ln(20)
+
+
+# Add Summary Data
+def render_summary(pdf, summary_data):
+    for label, value in summary_data.items():
+        # Set smaller font for the label
+        pdf.set_font('Arial', size=10)  # Small font for labels
+        label_width = 50  # Fixed width for label column
+        pdf.cell(label_width, 10, f"{label}: ", ln=0)  # Add label without line break
+        
+        # Set larger, fancier font for the value
+        pdf.set_font('Courier', style='B', size=14)  # Larger fancy font for values
+        pdf.cell(0, 10, f"{value}", ln=1)  # Add value with line break after
+
+# Prepare summary data
+summary_data = {
+    "Order Times": order_times,
+    "Total Customers": total_customers,
+    "Returning Customers": returning_customers,
+    "Repurchase Rate": f"{repurchase_rate * 100:.2f}%",
+    "Valuable Customer ID": valuable_customer_id,
+}
+
+
+# Add Summary Data with new formatting
+pdf.add_page()
+pdf.chapter_title("Summary Data")
+render_summary(pdf, summary_data)
+
+# Create Pie Chart for Returning vs First-Time Customers
+fig1 = Figure(figsize=(6, 4))
+canvas = FigureCanvas(fig1)
+ax1 = fig1.add_subplot(111)
+ax1.pie([returning_customers, first_time_customers], labels=['Returning', 'First-time'],
+        autopct='%1.1f%%', colors=['green', 'orange'])
+ax1.set_title('Returning vs First-time Customers')
+
+pie_chart_path = 'returning_vs_first_time_chart.png'
+fig1.savefig(pie_chart_path)
+pdf.image(pie_chart_path, x=30, y=120, w=150)  # Adjusted placement to leave space
+
+# Add a new page for charts
+pdf.add_page()
+
+# Chart 2: Bar Chart for Order Times by Hour with Labels
+fig2 = Figure(figsize=(8, 4))
+canvas = FigureCanvas(fig2)
+ax2 = fig2.add_subplot(111)
+bars = ax2.bar(hour_data.keys(), hour_data.values(), color='blue', alpha=0.7)
+
+# Add labels on the x-axis for each hour
+ax2.set_xticks(list(hour_data.keys()))
+ax2.set_xticklabels([f"{hour}:00" for hour in hour_data.keys()])
+
+# Add titles and labels
+ax2.set_title('Order Times by Hour')
+ax2.set_xlabel('Hour of the Day')
+ax2.set_ylabel('Order Count')
+
+# Add notations above bars
+for bar in bars:
+    ax2.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 2,  # Positioning
+             f'{int(bar.get_height())}', ha='center', fontsize=10, color='black')
+
+ax2.grid(axis='y', linestyle='--', alpha=0.7)
+
+hour_chart_path = 'order_times_by_hour.png'
+fig2.savefig(hour_chart_path)
+pdf.image(hour_chart_path, x=20, y=50, w=150)
+
+# Chart 3: Bar Chart for Order Times by Day Name
+fig3 = Figure(figsize=(6, 4))
+canvas = FigureCanvas(fig3)
+ax3 = fig3.add_subplot(111)
+ax3.bar(day_name_data.keys(), day_name_data.values(), color='skyblue', alpha=0.8)
+ax3.set_title('Order Times by Day Name')
+ax3.set_xlabel('Day of the Week')
+ax3.set_ylabel('Order Count')
+ax3.grid(axis='y', linestyle='--', alpha=0.7)
+
+day_chart_path = 'order_times_by_day.png'
+fig3.savefig(day_chart_path)
+pdf.image(day_chart_path, x=20, y=150, w=150)
+
+# Add a new page for more charts
+pdf.add_page()
+
+# Chart 4: Pie Chart for Order Times by Month
+fig4 = Figure(figsize=(6, 4))
+canvas = FigureCanvas(fig4)
+ax4 = fig4.add_subplot(111)
+ax4.pie(month_data.values(), labels=month_data.keys(), autopct='%1.1f%%', colors=['gold', 'lightgreen', 'lightcoral'])
+ax4.set_title('Order Times by Month')
+
+month_chart_path = 'order_times_by_month.png'
+fig4.savefig(month_chart_path)
+pdf.image(month_chart_path, x=30, y=50, w=150)
+
+# Save the PDF
+final_pdf_report = 'Enhanced_Customer_Data_Insights_Report.pdf'
+pdf.output(final_pdf_report)
+
+print(f"PDF report created successfully! Saved at {final_pdf_report}")
